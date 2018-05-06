@@ -10,6 +10,7 @@ import pyseq
 class UI(QtWidgets.QDialog):
 
     def __init__(self, *args, **kwargs):
+        '''Create the UI'''
         super(UI, self).__init__(*args, **kwargs)
         self.setMinimumSize(350, 150)
         self.setWindowTitle("Upload to Athera")
@@ -32,10 +33,66 @@ class UI(QtWidgets.QDialog):
         self.upload_button = QtWidgets.QPushButton("Upload", self)
         self.gridLayout.addWidget(self.upload_button, 3, 1, 1, 1)
 
+        self.connect(self.upload_button, QtCore.SIGNAL('clicked()'), self.update_file_paths)
+
+
+    def update_file_paths(self):
+        # Save hip file before making any changes
+        hou.hipFile.save()
+
+        # Save as a new hip file
+        new_hip_file_name = hou.hipFile.basename().rpartition(".")
+        new_hip_file_name = os.path.join(hip_var, new_hip_file_name[0] + "_toAthera." + new_hip_file_name[-1])
+        # hou.hipFile.save(new_hip_file_name, True)
+
+        # Replace all parmameter paths by new path and gather files to upload
+        files_to_upload = []
+        for path in reference_objects.keys():
+            parameter = reference_objects[path].parm
+            new_path = str(self.destination_entry.text()) + reference_objects[path].new_path
+            unexpanded_filename = reference_objects[path].unexpanded_filename
+
+            # Update the parameter to point to the path on Athera
+            parameter.set(new_path + unexpanded_filename)
+
+            # Add the file to the queue of files to upload
+            if reference_objects[path].is_seq:
+                files_to_upload += reference_objects[path].seq_files
+            else:
+                files_to_upload.append(reference_objects[path].path)
+
+        # Add the new hip file to the list of files to Upload
+        files_to_upload.append(new_hip_file_name)
+
+        # Save hip file again
+        hou.hipFile.save()
+
+        # Upload the files
+        self.upload(files_to_upload)
+
+        # Switch to previous session
+        # --Implement
+
+
+    def upload(files):
+        # Use transaction_manager.py
+        
+
+    def connect_to_athera(self):
+        api = OrbitAPI()
+        orgs = OrbitAPI.orgs_get()
+        if orgs[0] != 200:
+            pass
+            #  Raise warning
+        # Get projects
+        # Get mount ids for every org/proj
+        # Populate UI
+
 
 class ReferencedFile(object):
 
     def __init__(self, file_path, parm):
+        '''Creates an instance of a referenced file in the Hip file'''
         self.parm = parm
         self.path = hou.expandString(file_path)
         self.unexpanded_path = file_path
@@ -47,16 +104,18 @@ class ReferencedFile(object):
         self.group = self.group_get(self.ext)
         self.is_seq = self.parm.isTimeDependent()
         self.seq_obj = self.seq_obj_get(self.dir, self.filename)
-        self.seq_files = [obj.name for obj in self.seq_obj]
+        self.seq_files = [os.path.join(self.dir, obj.name) for obj in self.seq_obj]
         self.new_path = "/" + self.group + "/" + self.dir_basename + "/"
 
     def extension_get(self, filename):
+        '''Gets the extension of the file'''
         ext = os.path.splitext(filename)[-1][1:]
         if ext in (".gz", ".sc", ".bz", ".bz2"):
             ext = ".".join(filename.split(".")[-2:])
         return ext
 
     def group_get(self, ext):
+        '''Groups the file into groups depending on the type'''
         if ext == "abc":
             return "abc"
         elif ext == "obj":
@@ -96,23 +155,6 @@ reference_objects = {}
 
 for path in reference_paths:
     reference_objects[path[0]] = ReferencedFile(path[0], path[1])
-
-# Save hip file before making any changes
-hou.hipFile.save()
-
-# Save as a new hip file
-new_hip_file_name = hou.hipFile.basename().rpartition(".")
-new_hip_file_name = os.path.join(hip_var, new_hip_file_name[0] + "_toAthera." + new_hip_file_name[-1])
-# hou.hipFile.save(new_hip_file_name, True)
-
-# Replace all parmameter paths by new path
-for path in reference_objects.keys():
-    parameter = reference_objects[path].parm
-    new_path = reference_objects[path].new_path
-    unexpanded_filename = reference_objects[path].unexpanded_filename
-
-    # parameter.set(new_path + unexpanded_filename)
-
 
 ui = UI()
 ui.show()
