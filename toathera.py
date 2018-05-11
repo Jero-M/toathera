@@ -3,8 +3,10 @@ import sys
 from PySide2 import QtWidgets, QtGui, QtCore
 
 sys.path.append("C:\Python27\Lib\site-packages")
+sys.path.append("D:\Jero\Documents\python")
 
 import pyseq
+from pyorbit import *
 
 
 class UI(QtWidgets.QDialog):
@@ -35,6 +37,9 @@ class UI(QtWidgets.QDialog):
 
         self.connect(self.upload_button, QtCore.SIGNAL('clicked()'), self.update_file_paths)
 
+        # Connect to Athera
+        self.api = OrbitAPI()
+        self.orgs = self.athera_get_orgs(self.api)
 
     def update_file_paths(self):
         # Save hip file before making any changes
@@ -65,7 +70,7 @@ class UI(QtWidgets.QDialog):
         files_to_upload.append(new_hip_file_name)
 
         # Save hip file again
-        hou.hipFile.save()
+        # hou.hipFile.save()
 
         # Upload the files
         self.upload(files_to_upload)
@@ -76,17 +81,18 @@ class UI(QtWidgets.QDialog):
 
     def upload(files):
         # Use transaction_manager.py
-        
+        pass
 
-    def connect_to_athera(self):
-        api = OrbitAPI()
-        orgs = OrbitAPI.orgs_get()
-        if orgs[0] != 200:
+    def athera_get_orgs(self, api):
+        orgs = {}
+        org_request =api.orgs_get()
+        if org_request[0] != 200:
             pass
             #  Raise warning
-        # Get projects
-        # Get mount ids for every org/proj
-        # Populate UI
+        for group in org_request[1]['groups']:
+            if group['type'].lower() == 'org':
+                orgs[group['name']] = group['id']
+        return orgs
 
 
 class ReferencedFile(object):
