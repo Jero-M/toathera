@@ -35,28 +35,32 @@ class UI(QtWidgets.QDialog):
         self.upload_button = QtWidgets.QPushButton("Upload", self)
         self.gridLayout.addWidget(self.upload_button, 3, 1, 1, 1)
 
-        self.connect(self.upload_button, QtCore.SIGNAL('clicked()'), self.update_file_paths)
-        self.org_comboBox.currentTextChanged.connect(self.populate_project_comboBox)
-
         # Connect to Athera
         self.api = OrbitAPI()
         self.orgs = self.athera_get_orgs(self.api)
 
         # Populate combo boxes
-        for org in self.orgs.keys():
+        for org in sorted(self.orgs.keys()):
             self.org_comboBox.addItem(org)
-        self.populate_project_comboBox
+        self.populate_project_comboBox()
 
         for org in self.orgs.keys():
             print self.orgs[org].org_name
             print self.orgs[org].org_id
             print self.orgs[org].mount_id
-            for project in self.orgs[org].projects:
-                print "\t", project.proj_name
+            for project in self.orgs[org].projects.keys():
+                print "\t", self.orgs[org].projects[project].proj_name
 
-    def populate_project_comboBox(selected_org):
-        selected_value = str( self.org_comboBox.currentText())
+        # Connect Signals
+        self.connect(self.upload_button, QtCore.SIGNAL('clicked()'), self.update_file_paths)
+        self.org_comboBox.currentTextChanged.connect(self.populate_project_comboBox)
+
+    def populate_project_comboBox(self):
+        selected_value = str(self.org_comboBox.currentText())
         current_org = self.orgs[selected_value]
+
+        for project in sorted(current_org.projects.keys()):
+            self.project_comboBox.addItem(current_org.projects[project].proj_name)
 
     def update_file_paths(self):
         # Save hip file before making any changes
@@ -127,10 +131,11 @@ class AtheraOrg(object):
         return json_response[1]['mounts'][0]['id']
 
     def athera_get_projects(self, id):
-        projects = []
+        projects = {}
         json_response = self.api.groups_children_get(id)
         for group in json_response[1]['groups']:
-            projects.append(AtheraProject(self.api, group))
+            project_obj = AtheraProject(self.api, group)
+            projects[project_obj.proj_name] = project_obj
         return projects
 
 
