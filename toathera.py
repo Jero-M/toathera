@@ -40,6 +40,12 @@ class UI(QtWidgets.QDialog):
         # Connect to Athera
         self.api = OrbitAPI()
         self.orgs = self.athera_get_orgs(self.api)
+        # self.projects = self.athera_get_projects(self.api, self.orgs)
+
+        for org in self.orgs:
+            print org.org_name
+            print org.org_id
+            print org.projects
 
     def update_file_paths(self):
         # Save hip file before making any changes
@@ -78,21 +84,69 @@ class UI(QtWidgets.QDialog):
         # Switch to previous session
         # --Implement
 
+    # def athera_get_orgs(self, api):
+    #     orgs = {}
+    #     org_request =api.orgs_get()
+    #     if org_request[0] != 200:
+    #         pass
+    #         #  Raise warning
+    #     for group in org_request[1]['groups']:
+    #         if group['type'].lower() == 'org':
+    #             orgs[group['name']] = group['id']
+    #     return orgs
+
+    def athera_get_orgs(self, api):
+        orgs = []
+        org_request =api.orgs_get()
+        if org_request[0] != 200:
+            print "Error connecting to Athera"
+            #  Raise warning
+        for group in org_request[1]['groups']:
+            if group['type'].lower() == 'org':
+                orgs.append(AtheraOrg(api, group))
+        return orgs
+
+    def athera_get_projects(self, api, orgs):
+        projects = {}
+        for org in orgs.keys():
+            proj_request = api.groups_children_get()
+            projects[org] = {}
 
     def upload(files):
         # Use transaction_manager.py
         pass
 
-    def athera_get_orgs(self, api):
-        orgs = {}
-        org_request =api.orgs_get()
-        if org_request[0] != 200:
-            pass
-            #  Raise warning
-        for group in org_request[1]['groups']:
-            if group['type'].lower() == 'org':
-                orgs[group['name']] = group['id']
-        return orgs
+
+class AtheraOrg(object):
+
+    def __init__(self, api, json_response):
+        '''Creates an instance of an Athera Org with all its components'''
+        self.api = api
+        self.org_name = json_response['name']
+        self.org_id = json_response['id']
+        self.mount_id = self.athera_get_mount_id(self.org_id)
+        self.projects = self.athera_get_projects(self.org_id)
+
+    def athera_get_mount_id(self, id):
+        json_response = self.api.mounts_get(id)
+        return json_response[1]['mounts'][0]['id']
+
+    def athera_get_projects(self, id):
+        projects = []
+        json_response = self.api.groups_children_get(id)
+        for group in json_response[1]['groups']:
+            projects.append(AtheraProject(self.api, group))
+        return projects
+
+
+class AtheraProject(AtheraOrg):
+
+    def __init__(self, api, json_response):
+        '''Creates an instance of an Athera Project'''
+        self.api = api
+        self.proj_name = json_response['name']
+        self.proj_id = json_response['id']
+        self.mount_id = super(AtheraProject, self).athera_get_mount_id(self.proj_id)
 
 
 class ReferencedFile(object):
