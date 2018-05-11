@@ -36,16 +36,27 @@ class UI(QtWidgets.QDialog):
         self.gridLayout.addWidget(self.upload_button, 3, 1, 1, 1)
 
         self.connect(self.upload_button, QtCore.SIGNAL('clicked()'), self.update_file_paths)
+        self.org_comboBox.currentTextChanged.connect(self.populate_project_comboBox)
 
         # Connect to Athera
         self.api = OrbitAPI()
         self.orgs = self.athera_get_orgs(self.api)
-        # self.projects = self.athera_get_projects(self.api, self.orgs)
 
-        for org in self.orgs:
-            print org.org_name
-            print org.org_id
-            print org.projects
+        # Populate combo boxes
+        for org in self.orgs.keys():
+            self.org_comboBox.addItem(org)
+        self.populate_project_comboBox
+
+        for org in self.orgs.keys():
+            print self.orgs[org].org_name
+            print self.orgs[org].org_id
+            print self.orgs[org].mount_id
+            for project in self.orgs[org].projects:
+                print "\t", project.proj_name
+
+    def populate_project_comboBox(selected_org):
+        selected_value = str( self.org_comboBox.currentText())
+        current_org = self.orgs[selected_value]
 
     def update_file_paths(self):
         # Save hip file before making any changes
@@ -84,33 +95,17 @@ class UI(QtWidgets.QDialog):
         # Switch to previous session
         # --Implement
 
-    # def athera_get_orgs(self, api):
-    #     orgs = {}
-    #     org_request =api.orgs_get()
-    #     if org_request[0] != 200:
-    #         pass
-    #         #  Raise warning
-    #     for group in org_request[1]['groups']:
-    #         if group['type'].lower() == 'org':
-    #             orgs[group['name']] = group['id']
-    #     return orgs
-
     def athera_get_orgs(self, api):
-        orgs = []
+        orgs = {}
         org_request =api.orgs_get()
         if org_request[0] != 200:
             print "Error connecting to Athera"
             #  Raise warning
         for group in org_request[1]['groups']:
             if group['type'].lower() == 'org':
-                orgs.append(AtheraOrg(api, group))
+                org_obj = AtheraOrg(api, group)
+                orgs[org_obj.org_name] = org_obj
         return orgs
-
-    def athera_get_projects(self, api, orgs):
-        projects = {}
-        for org in orgs.keys():
-            proj_request = api.groups_children_get()
-            projects[org] = {}
 
     def upload(files):
         # Use transaction_manager.py
