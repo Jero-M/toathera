@@ -44,13 +44,6 @@ class UI(QtWidgets.QDialog):
             self.org_comboBox.addItem(org)
         self.populate_project_comboBox()
 
-        for org in self.orgs.keys():
-            print self.orgs[org].org_name
-            print self.orgs[org].org_id
-            print self.orgs[org].mount_id
-            for project in self.orgs[org].projects.keys():
-                print "\t", self.orgs[org].projects[project].proj_name
-
         # Connect Signals
         self.connect(self.upload_button, QtCore.SIGNAL('clicked()'), self.update_file_paths)
         self.org_comboBox.currentTextChanged.connect(self.populate_project_comboBox)
@@ -69,7 +62,7 @@ class UI(QtWidgets.QDialog):
         # Save as a new hip file
         new_hip_file_name = hou.hipFile.basename().rpartition(".")
         new_hip_file_name = os.path.join(hip_var, new_hip_file_name[0] + "_toAthera." + new_hip_file_name[-1])
-        # hou.hipFile.save(new_hip_file_name, True)
+        hou.hipFile.save(new_hip_file_name, True)
 
         # Replace all parmameter paths by new path and gather files to upload
         files_to_upload = []
@@ -91,7 +84,7 @@ class UI(QtWidgets.QDialog):
         files_to_upload.append(new_hip_file_name)
 
         # Save hip file again
-        # hou.hipFile.save()
+        hou.hipFile.save()
 
         # Upload the files
         self.upload(files_to_upload)
@@ -111,9 +104,14 @@ class UI(QtWidgets.QDialog):
                 orgs[org_obj.org_name] = org_obj
         return orgs
 
-    def upload(files):
+    def upload(self):
         # Use transaction_manager.py
-        pass
+        selected_org = str(self.org_comboBox.currentText())
+        selected_project =  str(self.project_comboBox.currentText())
+        target_group_id = self.orgs[selected_org].projects[selected_project].proj_id
+        target_mount_id = self.orgs[selected_org].projects[selected_project].mount_id
+
+
 
 
 class AtheraOrg(object):
